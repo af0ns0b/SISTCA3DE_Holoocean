@@ -1,0 +1,4 @@
+git clone https://bitbucket.org/frostlab/holoocean/
+cd holoocean/clien
+git checkout develop
+pip install .
