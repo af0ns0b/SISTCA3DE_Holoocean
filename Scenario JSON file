@@ -1,0 +1,68 @@
+{ 
+    "name": "{Scenario Name}", 
+    "world": "{World it is associated with}", 
+    "main_agent": "{Name of the AUV}", 
+    "ticks_per_sec": {How much the simulation refreshes per second. It has to be higher than any sensor’s update frequency}, 
+    "frames_per_sec": {How many fps. If true, it will match ticks_per_second}, 
+    "octree_min": {Set the octree lower limit. 0.01 is the minimum}, 
+    "octree_max": {Set the octree upper limit}, 
+ 
+ 
+    "agents":[ 
+        { 
+            "agent_name": "{Name of the AUV}", 
+            "agent_type": "{Agent type. HoveringAUV or TorpedoAUV}", 
+            "sensors": [ 
+                { 
+                    "sensor_type": "{Type of sensor you want}", 
+                    "socket": "{Which socket the sensor will occupy}", 
+                    "Hz": {Update frequency of the sensor} 
+                }, 
+                { 
+                    "sensor_type": "{Type of sensor you want. Imagine it is the GPSSensor}", 
+                    "socket": "{Which socket the sensor will occupy. Imagine it is the IMUSensor Socket}", 
+                    "Hz": {Update frequency of the sensor}, 
+                    "configuration":{ 
+                        "Depth": {How deep the sensor can receive GPS messages} 
+                    } 
+                }, 
+
+                { 
+
+                    "sensor_type": ""{Type of sensor you want. Imagine it is the RGBCamera}", 
+                    "sensor_name": "{Name of the sensor}", 
+                    "socket": "{Socket where the camera will be installed}", 
+                    "configuration": { 
+                       "CaptureHeight": {Picture height resolution}, 
+                       "CaptureWidth": {Picture width resolution} 
+                    } 
+                }, 
+ 
+                { 
+                    "sensor_type": "{Type of sensor you want. Imagine it is the ImagingSonar}", 
+                    "rotation": [{Set the rotation [x, y, z]}], 
+                    "socket": "SonarSocket", 
+                    "Hz": {Update frequency of the sensor}, 
+                    "configuration": { 
+                        "Azimuth": {Visible side to side angle}, 
+                        "Elevation": {Elevation angle of the sensor}, 
+                        "RangeBins": {Distance resolution}, 
+                        "AzimuthBins": {Azimuth resolution}, 
+                        "RangeMin": {Minimum range}, 
+                        "RangeMax": {Maximum range}, 
+                        "AzimuthStreaks": {Azimuth artifacts}, 
+                        "InitOctreeRange": {Range of the octree}, 
+                        "ViewRegion": {Set it to true so you can see the area covered by the imaging sonar}, 
+                    } 
+               } 
+ 
+            ], 
+            "control_scheme": {Control scheme for the AUV. By putting "0" you can control all the 8 thrusters individually}, 
+            "location": [{location of the AUV [x, y, z]}], 
+            "rotation": [{rotation of the AUV [x, y, z]}] 
+        } 
+    ], 
+
+    "window_width": {Window width resolution}, 
+    "window_height": {Window height resolution} 
+} 
