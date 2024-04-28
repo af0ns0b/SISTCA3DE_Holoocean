@@ -1,0 +1,89 @@
+import holoocean 
+import numpy as np 
+import matplotlib.pyplot as plt 
+ 
+scenario = "diy-ExampleLevel" 
+simulationConfiguration = holoocean.packagemanager.get_scenario(scenario) 
+# "location": [ 3.6911056, -2.1761441, -1], 
+# ECHO SOUNDER CONFIG 
+simConfigSonar = simulationConfiguration['agents'][0]['sensors'][-1]["configuration"] 
+azimuth = simConfigSonar['Azimuth'] 
+minRange = simConfigSonar['RangeMin'] 
+maxRange = simConfigSonar['RangeMax'] 
+binsRange = simConfigSonar['RangeBins'] 
+binsAzimuth = simConfigSonar['AzimuthBins'] 
+ 
+# GET PLOT READY 
+ 
+# Enable interactive mode. 
+plt.ion() 
+ 
+# generate polar representation for WCI 
+figure, axis = plt.subplots(subplot_kw=dict(polar=True)) 
+ 
+# set the 0 to -pi/2 so for a better representation of the WCI 
+axis.set_theta_zero_location("N") 
+ 
+# limit the polar representation of data according to the echo sounder Azimuth 
+ 
+# Set the minimum theta limit in degrees. 
+axis.set_thetamin(-azimuth / 2) 
+ 
+# Set the maximum theta limit in degrees. 
+axis.set_thetamax(azimuth / 2) 
+ 
+# pixel representation: (r, theta) -> range and theta 
+# evenly space possible theta values. The azimuth bins state how the angles are spaced (pixels) 
+# theta in radians 
+theta = np.linspace(-azimuth / 2, azimuth / 2, binsAzimuth) * np.pi / 180 
+ 
+# evenly space numbers over a specified interval. The azimuth bins state how the values are spaced. 
+sonarRange = np.linspace(minRange, maxRange, binsRange) 
+ 
+thetaMesh, rangeMesh = np.meshgrid(theta, sonarRange) 
+ 
+backscatterZeroes = np.zeros_like(thetaMesh)  # backscatter is the echo value 
+ 
+plt.grid(False)  # if it's true, traditional output sonar lines are turned on 
+ 
+# paint the SONAR representation 
+plot = axis.pcolormesh(thetaMesh, rangeMesh, backscatterZeroes, cmap='jet', shading='auto', vmin=0, vmax=1) 
+plt.tight_layout() 
+figure.canvas.draw() 
+figure.canvas.flush_events() 
+ 
+flag = 0  # automatic mode (set to 1 when an object/obstacle is detected at the defined minimum range) 
+command = np.array([0, 0, 0, 0, 0, 0, 0, 0])  # AUV stopped 
+ 
+distance_detection = 5  # wanted distance in meters 
+threshold_range_bins = int((distance_detection * binsRange) / (maxRange - minRange))  # threshold_bins = 15 
+ 
+ 
+# with tf.device('/GPU:0'): 
+with holoocean.make(scenario) as env: 
+ 
+    while True: 
+ 
+        env.act("auv0", command)  # send the command to the AUV 
+        state = env.tick()  # refresh simulation 
+ 
+        if flag == 0:  # stop going forward if an object is detected 
+            command = np.array([0, 0, 0, 0, 10, 10, 10, 10])  # go forward 
+ 
+        if 'ImagingSonar' in state: 
+            s = state['ImagingSonar']  # get sonar value 
+            plot.set_array(s.ravel())  # create the plot 
+            figure.canvas.draw()  # create the plot 
+            figure.canvas.flush_events()  # create the plot 
+ 
+            if np.any(s[0: threshold_range_bins]) >= 0.1:  # object/obstacle detection 
+                # (change 0.1 to other value to change the backscatter threshold) 
+                # (s[from row, to row (excluded)]) 
+                # Because the array starts with 0 and goes to 29 (30 range bins), 
+                # we actually want to exclude 15 and only go to the 14th range row 
+ 
+                flag = 1 
+                command = np.array([0, 0, 0, 0, 1, 0, 0, 0])  # turn left 
+ 
+            else: 
+                flag = 0 
