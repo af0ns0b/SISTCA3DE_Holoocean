@@ -1,0 +1,7 @@
+import holoocean 
+import numpy as np
+
+env = holoocean.make("PierHarbor-Hovering") # The scenario you want to use 
+command = np.array([10,10,10,10,0,0,0,0]) # Commands for each thruster 
+while (True): 
+   state = env.step(command) # Send the command to the AUV 
