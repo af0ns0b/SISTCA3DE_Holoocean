@@ -1,0 +1,10 @@
+import holoocean 
+import numpy as np 
+ 
+env = holoocean.make("diy-ExampleLevel") #name of the map 
+ 
+# The hovering AUV takes a command for each thruster 
+command = np.array([10,10,10,10,0,0,0,0]) # control each thruster 
+ 
+while(True): 
+   state = env.step(command) #this line is needed everytime you want to send a command to the AUV 
