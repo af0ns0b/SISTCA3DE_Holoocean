@@ -1,0 +1,21 @@
+import holoocean 
+import numpy as np 
+ 
+scenario = "diy-ExampleLevel" 
+simulationConfiguration = holoocean.packagemanager.get_scenario(scenario) 
+ 
+command = np.array([0, 0, 0, 0, 10, 10, 10, 10]) 
+ 
+with holoocean.make(scenario) as env: 
+    while True: 
+ 
+        env.act("auv0", command) 
+        state = env.tick() 
+ 
+        if 'GPSSensor' in state: 
+            s_gps = state['GPSSensor']  # get gps data 
+            print(s_gps)  # print gps data 
+ 
+        if 'LocationSensor' in state: 
+            s_location = state['LocationSensor']  # get location data 
+            print(s_location)  # print location data 
