@@ -1,0 +1,14 @@
+import holoocean, cv2 
+ 
+env = holoocean.make("diy-ExampleLevel")    # map name 
+env.act('auv0', [10,10,10,10,0,0,0,0])  #command for the thrusters    
+ 
+for _ in range(200): #change with "while (True)" for so the simulation won´t stop 
+    state = env.tick() 
+ 
+    if "LeftCamera" in state:   #we set the camera name on the scenario json file 
+        pixels = state["LeftCamera"]    #we set the camera resolution on the scenario json file 
+        cv2.namedWindow("Camera Output")    #name of the window that will open 
+        cv2.imshow("Camera Output", pixels[:, :, 0:3])  #show the image 
+        cv2.waitKey(0)  #press to resume the code 
+        cv2.destroyAllWindows() #closes the window of the camera output 
