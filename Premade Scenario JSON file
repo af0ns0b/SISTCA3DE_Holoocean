@@ -1,0 +1,86 @@
+{ 
+    "name": "ExampleLevel", 
+    "world": "diy", 
+    "main_agent": "auv0", 
+    "ticks_per_sec": 45, 
+    "frames_per_sec": true, 
+    "octree_min": 0.02, 
+    "octree_max": 3, 
+ 
+ 
+    "agents":[ 
+        { 
+            "agent_name": "auv0", 
+            "agent_type": "HoveringAUV", 
+            "sensors": [ 
+                { 
+                    "sensor_type": "PoseSensor", 
+                    "socket": "IMUSocket" 
+                }, 
+                { 
+                    "sensor_type": "VelocitySensor", 
+                    "socket": "IMUSocket" 
+                }, 
+                { 
+                    "sensor_type": "RotationSensor", 
+                    "socket": "IMUSocket" 
+                }, 
+                { 
+                    "sensor_type": "IMUSensor", 
+                    "socket": "IMUSocket", 
+                    "Hz": 30 
+                }, 
+                { 
+                    "sensor_type": "GPSSensor", 
+                    "socket": "IMUSocket", 
+                    "Hz": 5, 
+                    "configuration":{ 
+                        "Depth": 100 
+                    } 
+                }, 
+                { 
+                    "sensor_type": "RGBCamera", 
+                    "sensor_name": "LeftCamera", 
+                    "socket": "CameraLeftSocket", 
+                    "configuration": { 
+                       "CaptureHeight": 720, 
+                       "CaptureWidth": 1280 
+                    } 
+                }, 
+                { 
+                    "sensor_type": "RGBCamera", 
+                    "sensor_name": "RightCamera", 
+                    "socket": "CameraRightSocket", 
+                    "configuration": { 
+                       "CaptureHeight": 720, 
+                       "CaptureWidth": 1280 
+                    } 
+                }, 
+                { 
+                    "sensor_type": "ImagingSonar", 
+                    "rotation": [0, 0, 0], 
+                    "socket": "SonarSocket", 
+                    "Hz": 5, 
+                    "configuration": { 
+                        "Azimuth": 30, 
+                        "Elevation": 15, 
+                        "RangeBins": 30,
+                        "AzimuthBins": 10, 
+                        "RangeMin": 0.1, 
+                        "RangeMax": 10, 
+                        "AzimuthStreaks": -1, 
+                        "InitOctreeRange":50, 
+                        "ViewRegion": true 
+                    } 
+                }               
+            ], 
+ 
+            "control_scheme": 0, 
+            "location": [18, -40, -2.418196], 
+            "rotation": [0.0, 0.0, 0.0] 
+        } 
+    ], 
+
+    "window_width": 1280, 
+    "window_height": 720 
+} 
