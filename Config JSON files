@@ -1,0 +1,14 @@
+{ 
+    "name": "{Name of the world (the folder’s name)}", 
+    "platform": "{Operating system}", 
+    "version": "{Holoocean’s version}", 
+    "path": "{Path to Holodeck.exe}", 
+    "worlds": [ 
+        { 
+            "name" : "{Name of the scenario}", 
+            "pre_start_steps": {How many ticks should occur before starting the simulation}, 
+            "env_min" : [{Set the lower bounds of the world when an octree is made for a sonar type sensor}], 
+            "env_max" : [{Set the upper bounds of the world when an octree is made for a sonar type sensor }] 
+        } 
+    ] 
+} 
