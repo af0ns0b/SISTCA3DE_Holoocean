@@ -1,0 +1,240 @@
+import holoocean
+import numpy as np
+import matplotlib.pyplot as plt
+import controlAUV as Control
+import cv2
+import win32api
+import os
+
+scenario = "diy-ExampleLevel"
+simulationConfiguration = holoocean.packagemanager.get_scenario(scenario)
+# "location": [ 3.6911056, -2.1761441, -1],
+# ECHO SOUNDER CONFIG
+simConfigSonar = simulationConfiguration['agents'][0]['sensors'][-1]["configuration"]
+azimuth = simConfigSonar['Azimuth']
+minRange = simConfigSonar['RangeMin']
+maxRange = simConfigSonar['RangeMax']
+binsRange = simConfigSonar['RangeBins']
+binsAzimuth = simConfigSonar['AzimuthBins']
+
+# GET PLOT READY
+
+# Enable interactive mode.
+plt.ion()
+
+# generate polar representation for WCI
+figure, axis = plt.subplots(subplot_kw=dict(polar=True))
+
+# set the 0 to -pi/2 so for a better representation of the WCI
+axis.set_theta_zero_location("N")
+
+# limit the polar representation of data according to the echo sounder Azimuth
+
+# Set the minimum theta limit in degrees.
+axis.set_thetamin(-azimuth / 2)
+
+# Set the maximum theta limit in degrees.
+axis.set_thetamax(azimuth / 2)
+
+# pixel representation: (r, theta) -> range and theta
+# evenly space possible theta values. The azimuth bins state how the angles are spaced (pixels)
+# theta in radians
+theta = np.linspace(-azimuth / 2, azimuth / 2, binsAzimuth) * np.pi / 180
+
+# evenly space numbers over a specified interval. The azimuth bins state how the values are spaced.
+sonarRange = np.linspace(minRange, maxRange, binsRange)
+
+thetaMesh, rangeMesh = np.meshgrid(theta, sonarRange)
+
+backscatterZeroes = np.zeros_like(thetaMesh)  # backscatter is the echo value
+
+plt.grid(False)  # if it's true, traditional output sonar lines are turned on
+
+# paint the SONAR representation
+plot = axis.pcolormesh(thetaMesh, rangeMesh, backscatterZeroes, cmap='jet', shading='auto', vmin=0, vmax=1)
+plt.tight_layout()
+figure.canvas.draw()
+figure.canvas.flush_events()
+
+m = 1   # manual mode flag
+flag = 0  # automatic mode (set to 1 when an object/obstacle is detected at the defined minimum range)
+command = np.array([0, 0, 0, 0, 0, 0, 0, 0])  # AUV stopped
+flag_right_camera = 0  # to take just one photo to the object/obstacle
+flag_obstacle = 0
+distance_detection = 5  # wanted distance in meters
+threshold_bins = int((distance_detection * binsRange) / (maxRange - minRange))  # threshold_bins = 15
+flag_depth = 0
+number_pixels_detected = 0
+
+img_original = 0
+result = 0
+img_detection = 0
+flag_go_up = 0
+flag_go_down = 0
+
+# with tf.device('/GPU:0'):
+with holoocean.make(scenario) as env:
+
+    while True:
+
+        env.act("auv0", command)  # send the command to the AUV
+        state = env.tick()  # refresh simulation
+
+        if 'q' in Control.pressed_keys:  # quit
+            break
+
+        if 'm' in Control.pressed_keys:  # manual mode
+            m = 1
+
+        if 'n' in Control.pressed_keys:  # automatic mode
+            m = 0
+
+        if 't' in Control.pressed_keys:  # automatic mode
+            if "LeftCamera" in state:
+                pixels = state["LeftCamera"]  # get camera picture
+                cv2.namedWindow("Left Camera Output")  # create image
+                cv2.imshow("Left Camera Output", pixels[:, :, 0:3])  # create image
+                # cv2.waitKey(0)  # wait for key to be pressed
+                # cv2.destroyAllWindows()  # close the window
+
+        if 'y' in Control.pressed_keys:  # automatic mode
+            if "RightCamera" in state:
+                pixels = state["RightCamera"]  # get camera picture  # create image
+                cv2.namedWindow("Right Camera Output")  # create image
+                cv2.imshow("Right Camera Output", pixels[:, :, 0:3])  # create image
+                # cv2.waitKey(0)  # wait for key to be pressed
+                # cv2.destroyAllWindows()  # close the window
+
+        if m == 1:  # manual mode
+            command = Control.parse_keys(Control.pressed_keys, Control.force)  # get button pressed
+
+            # reset flags
+            flag = 0
+            flag_right_camera = 0
+            flag_obstacle = 0
+            flag_depth = 0
+            flag_go_up = 0
+            flag_go_down = 0
+            number_pixels_detected = 0
+            old_depth = 0
+
+        if m == 0 and flag == 0 and flag_go_down == 0 and flag_go_up == 0:  # automatic mode
+            command = np.array([0, 0, 0, 0, 10, 10, 10, 10])  # go forward
+
+        if 'ImagingSonar' in state:
+            s = state['ImagingSonar']  # get sonar value
+            plot.set_array(s.ravel())  # create the plot
+            figure.canvas.draw()  # create the plot
+            figure.canvas.flush_events()  # create the plot
+
+            if np.any(s[0:threshold_bins]) >= 0.1 and m == 0 or flag_go_up == 1 or flag_go_down == 1:
+                # object/obstacle detection
+                # (change 0.1 to other value to change the backscatter threshold)
+                # (s[from row, to row (excluded)])
+                # Because the array starts with 0 and goes to 29 (30 range bins),
+                # we actually want to exclude 15 and only go to the 14th range row
+
+                if "RightCamera" in state and flag_right_camera == 0:
+                    pixels = state["RightCamera"]  # get camera picture  # create image
+                    flag_right_camera = 1
+                    # cv2.namedWindow("Right Camera Output")  # create image
+                    # cv2.imshow("Right Camera Output", pixels[:, :, 0:3])  # create image
+                    # cv2.waitKey(0)  # wait for key to be pressed
+                    # cv2.destroyAllWindows()  # close the window
+
+                    # photo's directory and path
+                    directory = r'C:\Users\tiago\AppData\Local\holoocean\0.5.0\worlds\testworld'
+                    image_path = r'C:\Users\tiago\AppData\Local\holoocean\0.5.0\worlds\testworld\detection.jpg'
+                    os.chdir(directory)  # change directory
+                    filename = 'detection.jpg'  # name that will be given to the photo
+                    cv2.imwrite(filename, pixels)  # save photo
+
+                    img_original = cv2.imread(image_path)  # copy the photo to another variable
+
+                    result = img_original.copy()  # copy the photo to another variable
+                    img_detection = img_original.copy()  # copy the photo to another variable
+
+                    img_cut = cv2.cvtColor(img_original, cv2.COLOR_BGR2HSV)  # convert color to HSV color space
+
+                    # lower boundary RED color range values (HSV format -> H: 0-179; S: 0-255; V: 0-255)
+                    lower1 = np.array([0, 100, 20], np.uint8)
+                    upper1 = np.array([10, 255, 255], np.uint8)
+
+                    # upper boundary RED color range values (HSV format -> H: 0-179; S: 0-255; V: 0-255)
+                    lower2 = np.array([150, 100, 0], np.uint8)
+                    upper2 = np.array([179, 255, 255], np.uint8)
+
+                    # mask creation with the boundaries
+                    lower_mask = cv2.inRange(img_cut, lower1, upper1)
+                    upper_mask = cv2.inRange(img_cut, lower2, upper2)
+                    full_mask = lower_mask + upper_mask
+
+                    # show only the red part of the image. The rest will be shown as black
+                    result = cv2.bitwise_and(result, result, mask=full_mask)
+                    # cv2.imshow('mask', full_mask)
+
+                    # contours creation (create a rectangle around the red object)
+                    contours, hierarchy = cv2.findContours(full_mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+                    for pic, contour in enumerate(contours):
+
+                        x, y, w, h = cv2.boundingRect(contour)
+                        img_detection = cv2.rectangle(img_detection, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                        cv2.putText(img_detection, "Red Colour", (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255))
+
+                    number_pixels_detected = cv2.countNonZero(full_mask)  # number of red pixels in the picture
+
+                if number_pixels_detected > 10:  # set point. if red pixels detected < 10 it is a false positive
+
+                    flag_go_up = 1  # flag to surface
+
+                if 'DepthSensor' in state and flag_go_up == 1 or 'DepthSensor' in state and flag_go_down == 1:
+                    d = state['DepthSensor']  # get depth value
+
+                    if flag_depth == 0:  # blocks the variable
+                        old_depth = d  # saves the old depth
+                        flag_depth = 1
+
+                    if d < -0.6 and flag_go_up == 1:  # surfaces until it is at 0.6 meters deep or less
+                        command = np.array([10, 10, 10, 10, 0, 0, 0, 0])  # go up
+
+                    elif d >= -0.6 and flag_go_up == 1:  # if it is 0.6 meters deep or less flag for going up is set
+                        flag_go_up = 0
+                        flag_go_down = 1
+
+                    if flag_obstacle == 0 and flag_go_down == 1:
+                        # open a message if a red object is detected
+                        win32api.MessageBox(0, 'Red obstacle detected!', 'Warning!')
+
+                        cv2.imshow("Original Image", img_original)  # shows original photo of the red object
+                        cv2.imshow('Object', result)  # only shows the red object
+                        cv2.imshow("Red Color Detection", img_detection)  # shows where is the red object
+
+                        flag_obstacle = 1  # blocks the warning until the process of deviation is complete
+
+                    if d > old_depth and flag_go_down == 1:  # if current depth < the depth it was before, goes down
+                        command = np.array([-2, -2, -2, -2, 0, 0, 0, 0])  # go down
+
+                    elif d <= old_depth and flag_go_down == 1:  # if current depth = the old depth, stops going down
+                        flag_go_down = 0
+
+                number_pixels_detected = 0  # resets the red pixels detected variable to zero
+                flag = 1  # flag of sonar detection in automatic mode
+
+                # if it in automatic mode, detected something 5 meters away or less,
+                # and it is not going up or down start to deviate to the left
+                if flag_go_up == 0 and flag_go_down == 0:
+                    command = np.array([0, 0, 0, 0, 1, 0, 0, 0])  # turn left
+
+            else:
+                # reset flags
+                flag = 0
+                flag_right_camera = 0
+                flag_obstacle = 0
+                flag_depth = 0
+                flag_go_up = 0
+                flag_go_down = 0
+                number_pixels_detected = 0
+                old_depth = 0
+
+plt.ioff()  # disable interactive mode
